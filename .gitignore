@@ -1,0 +1,11 @@
+*~
+.*.swp
+.*.swo
+*.tar.gz
+*.native
+*.byte
+*.d.native
+*.p.byte
+*.aux
+*.log
+_build
