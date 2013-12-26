@@ -8,7 +8,7 @@ type 'a stream = Stream of (unit -> ('a * 'a stream) option)
 
 (** you have to implement the functions below; this may not be very
     useful for the rest of the project, but consider this a warmup
-    exercize *)
+    exercise *)
 val nil : 'a stream
 val cons : 'a -> 'a stream -> 'a stream
 
