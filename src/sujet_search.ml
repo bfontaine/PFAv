@@ -47,32 +47,36 @@ module Logic1 = struct
   let solve = fun n (Search st) ->
     take st n
 
-  let keep_if stream test =
-    (* TODO *)
-    stream
-
-  let map_stream fn stream =
-    (* TODO *)
-    stream
-
   let map = fun fn (Search st) ->
-    Search(map_stream fn st)
+    let rec map_stream fn stream =
+      match stream with
+      | Stream(stf) ->
+          match stf () with
+          | None -> nil
+          | Some(x, stf') ->
+              Stream(fun () -> Some(fn x, map_stream fn stf'))
+    in
+      Search(map_stream fn st)
 
   let guard = fun test (Search st) ->
-    Search(keep_if st test)
+    let rec keep_if stream test =
+      match stream with
+      | Stream(stf) ->
+          match stf () with
+            | None -> nil
+            | Some(x, stf') ->
+                if (test x)
+                then Stream(fun () -> Some(x, keep_if stf' test))
+                else (keep_if stf' test)
+    in
+      Search(keep_if st test)
+
 (*
-  val map : ('a -> 'b) -> 'a search -> 'b search
-  (** the solutions of [map f prob] are all the [f x] such that [x]
-      is a solution of [prob]. *)
 
   val sum : 'a search -> 'b search -> ('a, 'b) sum search
   (** the solutions of [sum pa pb] are all the solutions of problem
       [pa], and all the solutions of problem [pb] *)
 
   val prod : 'a search -> 'b search -> ('a * 'b) search
-
-  val guard : ('a -> bool) -> 'a search -> 'a search
-  (** the solutions of [guard condition prob] are the solutions of
-      [prob] that also satisfy [condition]. *)
 *)
 end
