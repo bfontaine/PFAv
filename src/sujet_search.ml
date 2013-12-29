@@ -67,16 +67,38 @@ module Logic1 = struct
             | Some(x, stf') ->
                 if (test x)
                 then Stream(fun () -> Some(x, keep_if stf' test))
+                (* FIXME infinite loop if (text x) is false *)
                 else (keep_if stf' test)
     in
       Search(keep_if st test)
+
+  let sum = fun (Search st1) (Search st2) ->
+    Search(nil) (* TODO *)
+
+  let prod = fun (Search st1) (Search st2) ->
+    (* FIXME this is a wrong implementation,
+     * prod (1,2) (1,2) should not give ((1,1),(2,2)) but
+     *  ((1,1),(1,2),(2,1),(2,2)) instead, that is for each element
+     *  of st1 and for each element of st2 create a pair of both.
+     *
+     * I'm not sure how this is useful on infinite streams, e.g.:
+     *  prod (1,2,...) (1,2,...) -> ((1,1),(1,2),...) and it'll never
+     *   give pairs with a non-1 number on the left.
+     *)
+    let rec prod_stream (Stream str1) (Stream str2) =
+      match str1 (), str2 () with
+      | None, _ -> nil
+      | _, None -> nil
+      | Some(x1, str1'), Some(x2, str2') ->
+          Stream(fun () ->
+            Some((x1, x2), prod_stream str1' str2'))
+    in
+      Search(prod_stream st1 st2)
 
 (*
 
   val sum : 'a search -> 'b search -> ('a, 'b) sum search
   (** the solutions of [sum pa pb] are all the solutions of problem
       [pa], and all the solutions of problem [pb] *)
-
-  val prod : 'a search -> 'b search -> ('a * 'b) search
 *)
 end
