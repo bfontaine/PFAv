@@ -8,7 +8,7 @@ let cons el stream =
   Stream(fun () -> Some (el, stream))
 
 let one el =
-  (cons el nil)
+  cons el nil
 
 let lcons el fn =
   cons el (fn ())

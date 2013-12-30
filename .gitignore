@@ -1,4 +1,5 @@
 *~
+*.o
 .*.swp
 .*.swo
 *.tar.gz
@@ -8,4 +9,7 @@
 *.p.byte
 *.aux
 *.log
-_build
+*.cmi
+*.cmo
+/t
+oUnit-anon.cache
