@@ -49,32 +49,29 @@ module Logic1 = struct
 
   let map = fun fn (Search st) ->
     let rec map_stream fn stream =
-      match stream with
-      | Stream(stf) ->
-          match stf () with
-          | None -> nil
-          | Some(x, stf') ->
-              Stream(fun () -> Some(fn x, map_stream fn stf'))
+      let Stream(stf) = stream in
+        match stf () with
+        | None -> nil
+        | Some(x, stf') ->
+            Stream(fun () -> Some(fn x, map_stream fn stf'))
     in
       Search(map_stream fn st)
 
   let guard = fun test (Search st) ->
     let rec keep_if stream test =
-      match stream with
-      | Stream(stf) ->
-          match stf () with
-            | None -> nil
-            | Some(x, stf') ->
-                if (test x)
-                then Stream(fun () -> Some(x, keep_if stf' test))
-                else (keep_if stf' test)
+      let Stream(stf) = stream in
+        match stf () with
+        | None -> nil
+        | Some(x, stf') ->
+            if (test x)
+            then Stream(fun () -> Some(x, keep_if stf' test))
+            else (keep_if stf' test)
     in
       Search(keep_if st test)
 
   let sum = fun (Search st1) (Search st2) ->
     let rec sum_stream st1 st2 =
-      match st1, st2 with
-      | Stream(s1), Stream(s2) ->
+      let Stream(s1), Stream(s2) = st1, st2 in
         match s1 (), s2 () with
         | None, None -> nil
         | Some(x, st1'), None ->
@@ -134,23 +131,27 @@ module Logic1 = struct
    * stack = [1,2,3,4]
    * (4,A)
    * (3,B)
-   *       --> problem here, (4,B) is missing
+   *       --> problem here, (4,B) is missing (FIXME)
+   *           this is an issue only for finite streams
    **)
   let prod = fun (Search st1) (Search st2) ->
-    let rec prod_stream st1 st2 stack1 =
-      match st1, st2 with
-      | Stream(s1), Stream(s2) ->
-          match s1 (), s2 () with
-          | None, _ -> nil
-          | _, None -> nil
-          | Some(x, st1'), Some(y, st2') ->
-              match stack1 with
-              | [] ->
-                  Stream(fun () ->
-                    Some ((x, y), prod_stream st1' st2' (x::stack1)))
-              | el::stack1' ->
-                  Stream(fun () ->
-                    Some ((el, y), prod_stream st1' st2' stack1'))
+    let rec prod_stream st1 st2 stack =
+      let Stream(s1) = st1 in
+        match s1 () with
+        | None -> nil
+        | Some (x, st1') ->
+            let rec for_stack st stck =
+              match stck with
+              | [] -> prod_stream st1' st2 stack'
+              | el::stck' ->
+                  let Stream(s) = st in
+                    match s () with
+                    | None -> prod_stream st1' st2 stack'
+                    | Some(y, st') ->
+                        Stream(fun () ->
+                          Some((el, y), for_stack st' stck'))
+            in
+              for_stack st2 (x::stack)
     in
       Search(prod_stream st1 st2 [])
 
