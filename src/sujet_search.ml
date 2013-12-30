@@ -67,38 +67,91 @@ module Logic1 = struct
             | Some(x, stf') ->
                 if (test x)
                 then Stream(fun () -> Some(x, keep_if stf' test))
-                (* FIXME infinite loop if (text x) is false *)
                 else (keep_if stf' test)
     in
       Search(keep_if st test)
 
   let sum = fun (Search st1) (Search st2) ->
-    Search(nil) (* TODO *)
-
-  let prod = fun (Search st1) (Search st2) ->
-    (* FIXME this is a wrong implementation,
-     * prod (1,2) (1,2) should not give ((1,1),(2,2)) but
-     *  ((1,1),(1,2),(2,1),(2,2)) instead, that is for each element
-     *  of st1 and for each element of st2 create a pair of both.
-     *
-     * I'm not sure how this is useful on infinite streams, e.g.:
-     *  prod (1,2,...) (1,2,...) -> ((1,1),(1,2),...) and it'll never
-     *   give pairs with a non-1 number on the left.
-     *)
-    let rec prod_stream (Stream str1) (Stream str2) =
-      match str1 (), str2 () with
-      | None, _ -> nil
-      | _, None -> nil
-      | Some(x1, str1'), Some(x2, str2') ->
-          Stream(fun () ->
-            Some((x1, x2), prod_stream str1' str2'))
+    let rec sum_stream st1 st2 =
+      match st1, st2 with
+      | Stream(s1), Stream(s2) ->
+        match s1 (), s2 () with
+        | None, None -> nil
+        | Some(x, st1'), None ->
+            Stream(fun() -> Some(Left x, sum_stream st1' st2))
+        | None, Some(x, st2') ->
+            Stream(fun() -> Some(Right x, sum_stream st1 st2'))
+        | Some(x, st1'), Some(y, st2') ->
+            Stream(fun() ->
+              Some(Left x,
+                Stream(fun () ->
+                  Some(Right y, sum_stream st1' st2'))))
     in
-      Search(prod_stream st1 st2)
+      Search(sum_stream st1 st2)
 
-(*
+  (* The idea is to stream the product of two series by 'diagonals', as if
+   * the pairs were represented in a matrix as below:
+   *
+   * .     A     B     C     D
+   * X (X,A) (X,B) (X,C) (X,D)
+   * Y (Y,A) (Y,B) (Y,C) (Y,D)
+   * Z (Z,A) (Z,B) (Z,C) (Z,D)
+   *
+   * This gives us something like that:
+   *
+   *  (X,A) 
+   *  (X,B) (Y,A)
+   *  (X,C) (Y,B) (Z,A)
+   *  (X,D) (Y,C) (Z,B)
+   *  (Y,D) (Z,C)
+   *  (Z,D)
+   *
+   * The algorithm in pseudo-code:
+   *
+   * stack = []
+   * for x_i in S1:
+   *   stack << x_i
+   *   stack2 = stack
+   *   for y_j in S2 AND while stack2 not empty:
+   *     stream (x_i, y_j)
+   *     pop stack2
+   *
+   * The issue is that we re-compute S2's solutions for each S1's one.
+   *
+   * Example:
+   *
+   * with S1 = [1,2,3,4]
+   *      S2 = [A,B]
+   *
+   * stack = [1]
+   * (1,A)
+   * stack = [1,2]
+   * (2,A)
+   * (1,B)
+   * stack = [1,2,3]
+   * (3,A)
+   * (2,B)
+   * stack = [1,2,3,4]
+   * (4,A)
+   * (3,B)
+   *       --> problem here, (4,B) is missing
+   **)
+  let prod = fun (Search st1) (Search st2) ->
+    let rec prod_stream st1 st2 stack1 =
+      match st1, st2 with
+      | Stream(s1), Stream(s2) ->
+          match s1 (), s2 () with
+          | None, _ -> nil
+          | _, None -> nil
+          | Some(x, st1'), Some(y, st2') ->
+              match stack1 with
+              | [] ->
+                  Stream(fun () ->
+                    Some ((x, y), prod_stream st1' st2' (x::stack1)))
+              | el::stack1' ->
+                  Stream(fun () ->
+                    Some ((el, y), prod_stream st1' st2' stack1'))
+    in
+      Search(prod_stream st1 st2 [])
 
-  val sum : 'a search -> 'b search -> ('a, 'b) sum search
-  (** the solutions of [sum pa pb] are all the solutions of problem
-      [pa], and all the solutions of problem [pb] *)
-*)
 end
