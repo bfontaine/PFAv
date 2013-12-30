@@ -66,40 +66,96 @@
     more often than any other; same thing for 2 in this example.
 *)
 
-module type PROB = sig
-  type 'a dist
+module type PROB =
+  sig
+    type 'a dist
 
-  (** You may (or may not) need to sort values of type ['a] in your
-      implementation of the PROB signature. In order to make life
-      easier for those of you that decide to do so, I decided than
-      [run] would always require a comparison function of type ['a ->
-      'a -> int], just as those required by [Map.Make] and
-      [Set.Make]. In most cases you can just pass the standard
-      function [compare] of OCaml, which has the right type and does
-      the right thing for values that don't contain functions.
-  *)
-  val run : ('a -> 'a -> int) -> 'a dist -> ('a * float) list
+    (** You may (or may not) need to sort values of type ['a] in your
+        implementation of the PROB signature. In order to make life
+        easier for those of you that decide to do so, I decided than
+        [run] would always require a comparison function of type ['a ->
+        'a -> int], just as those required by [Map.Make] and
+        [Set.Make]. In most cases you can just pass the standard
+        function [compare] of OCaml, which has the right type and does
+        the right thing for values that don't contain functions.
+    *)
+    val run : ('a -> 'a -> int) -> 'a dist -> ('a * float) list
 
-  val return : 'a -> 'a dist
+    val return : 'a -> 'a dist
 
-  (** an element chosen at random, with equal probability, in the
-      given array; you can assume that the array elements are all distinct *)
-  val uniform : 'a array -> 'a dist
+    (** an element chosen at random, with equal probability, in the
+        given array; you can assume that the array elements are all distinct *)
+    val uniform : 'a array -> 'a dist
 
-  (** [rand n] is a random number between 0 and (n-1) *)
-  val rand : int -> int dist
+    (** [rand n] is a random number between 0 and (n-1) *)
+    val rand : int -> int dist
 
-  (** be careful to compute the probabilities of the product
-      correctly *)
-  val prod : 'a dist -> 'b dist -> ('a * 'b) dist
-  val map : ('a -> 'b) -> 'a dist -> 'b dist
+    (** be careful to compute the probabilities of the product
+        correctly *)
+    val prod : 'a dist -> 'b dist -> ('a * 'b) dist
+    val map : ('a -> 'b) -> 'a dist -> 'b dist
 
-  val bind : 'a dist -> ('a -> 'b dist) -> 'b dist
-end
+    val bind : 'a dist -> ('a -> 'b dist) -> 'b dist
+  end
 
-module Prob : PROB = struct
-    (* FILL CODE HERE *)
-end
+(* see http://caml.inria.fr/pub/ml-archives/caml-list/
+         2004/09/e3d59b55a2e7ec4359060fd31d23a452.en.html *)
+let cons h t = h::t
+let list_of_array a = Array.fold_right cons a []
+
+module Prob : PROB =
+  struct
+    type 'a dist = Dist of 'a list
+
+    let run = fun cmp (Dist l) ->
+      let len = List.length l
+      and ll = List.sort cmp l in
+        (* TODO count # of occurrences of each element divided by length
+         * e.g.:
+         *  [1;1;2;3;3;3] -> len = 6
+         *                => [(1,0.3333...);(2,0.16666...);(3,0.5)]
+         *
+         *)
+        []
+
+    let return x =
+      Dist([x])
+
+    let uniform xs =
+      Dist(list_of_array xs)
+
+    let rand n =
+      let rec rand_a n l =
+        if n < 0 then l
+        else rand_a (n-1) (n::l)
+      in
+        Dist(rand_a (n-1) [])
+
+    let prod = fun (Dist d1) (Dist d2) ->
+      let rec prod_helper d1 d2 p =
+        match d1, d2 with
+        | [], _ -> p
+        | _, [] -> p
+        | x::d1', d2' ->
+            let rec prod_on_list el lst p =
+              match lst with
+              | [] -> prod_helper d1' d2' p
+              | y::lst' ->
+                  prod_on_list el lst' ((x,y)::p)
+            in
+              prod_on_list x d2' p
+      in
+        Dist(prod_helper d1 d2 [])
+
+    let map = fun f (Dist l) ->
+      Dist(List.map f l)
+
+    let bind = fun (Dist l) f ->
+      let ls =
+        (List.map (fun x -> let Dist(l) = f x in l) l)
+      in
+        Dist(List.concat ls)
+  end
 
 (** {2 Where you should go from here} *)
 
@@ -212,6 +268,7 @@ let swap i j parray =
   parray
   |> PArray.add i (PArray.find j parray)
   |> PArray.add j (PArray.find i parray)
+
 
 (** Remark: feel free, of course, to add additional convenience
     functions, according to the needs of the code you'll develop. *)

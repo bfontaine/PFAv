@@ -2,14 +2,19 @@
 #
 
 SRC=src
-TESTS=tests
+TESTS_DIR=tests
 TESTS_EXE=t
 
+TESTS=\
+	$(TESTS_DIR)/stream_tests.ml \
+	$(TESTS_DIR)/prob_tests.ml
+
 PART1=sujet_search
+PART2=sujet_prob
 
 OCAMLFIND=ocamlfind
 
-.PHONY: test
+.PHONY: test clean cleanall
 
 $(SRC)/%.cmi: $(SRC)/%.mli
 	ocamlc -c $<
@@ -17,10 +22,15 @@ $(SRC)/%.cmi: $(SRC)/%.mli
 $(SRC)/%.cmo: $(SRC)/%.ml
 	ocamlc -c $<
 
-test: $(SRC)/$(PART1).cmi
+test: $(SRC)/$(PART1).cmi $(SRC)/$(PART2).cmo
 	@$(OCAMLFIND) ocamlc -I $(SRC) -o $(TESTS_EXE) -package oUnit -linkpkg -g \
-		$(SRC)/$(PART1).ml $(TESTS)/stream_tests.ml
+		$(SRC)/$(PART1).ml $(SRC)/$(PART2).ml $(TESTS)
 	@./$(TESTS_EXE)
 
 clean:
+	find . -name *~ -delete
 	rm -f $(TESTS_EXE)
+
+cleanall: clean
+	find . -name *.cmo -delete
+	find . -name *.cmi -delete
