@@ -140,18 +140,19 @@ module Logic1 = struct
         match s1 () with
         | None -> nil
         | Some (x, st1') ->
-            let rec for_stack st stck =
-              match stck with
-              | [] -> prod_stream st1' st2 stack'
-              | el::stck' ->
-                  let Stream(s) = st in
-                    match s () with
-                    | None -> prod_stream st1' st2 stack'
-                    | Some(y, st') ->
-                        Stream(fun () ->
-                          Some((el, y), for_stack st' stck'))
+            let stack' = x::stack in
+              let rec for_stack st stck =
+                match stck with
+                | [] -> prod_stream st1' st2 stack'
+                | el::stck' ->
+                    let Stream(s) = st in
+                      match s () with
+                      | None -> prod_stream st1' st2 stack'
+                      | Some(y, st') ->
+                          Stream(fun () ->
+                            Some((el, y), for_stack st' stck'))
             in
-              for_stack st2 (x::stack)
+              for_stack st2 stack'
     in
       Search(prod_stream st1 st2 [])
 
