@@ -122,7 +122,7 @@ module Prob : PROB =
           match ll with
           | el::ll' ->
               (* sorting is not required here, but this make results
-               * easier to read *)
+               * easier to read and unit tests easier to write *)
               List.sort compare (count el ll' 1.0 [])
           | [] -> []
 
@@ -159,7 +159,6 @@ module Prob : PROB =
       Dist(List.map f l)
 
     let bind = fun (Dist l) f ->
-      (* not sure this is what we need to do, but this matches the type *)
       let ls =
         (List.map (fun x -> let Dist(l) = f x in l) l)
       in
