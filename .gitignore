@@ -12,4 +12,6 @@
 *.cmi
 *.cmo
 /t
+/pt
+/stcktrace
 oUnit-anon.cache
