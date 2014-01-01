@@ -108,15 +108,23 @@ module Prob : PROB =
     type 'a dist = Dist of 'a list
 
     let run = fun cmp (Dist l) ->
-      let len = List.length l
+      let len = float_of_int (List.length l)
       and ll = List.sort cmp l in
-        (* TODO count # of occurrences of each element divided by length
-         * e.g.:
-         *  [1;1;2;3;3;3] -> len = 6
-         *                => [(1,0.3333...);(2,0.16666...);(3,0.5)]
-         *
-         *)
-        []
+        let rec count cur lst cur_count counts =
+          match lst with
+          | el::lst' when el=cur ->
+              count cur lst' (cur_count +. 1.0) counts
+          | el::lst' ->
+              count el lst' 1.0 ((cur, cur_count /. len)::counts)
+          | [] ->
+              ((cur, cur_count /. len)::counts)
+        in
+          match ll with
+          | el::ll' ->
+              (* sorting is not required here, but this make results
+               * easier to read *)
+              List.sort compare (count el ll' 1.0 [])
+          | [] -> []
 
     let return x =
       Dist([x])
@@ -151,6 +159,7 @@ module Prob : PROB =
       Dist(List.map f l)
 
     let bind = fun (Dist l) f ->
+      (* not sure this is what we need to do, but this matches the type *)
       let ls =
         (List.map (fun x -> let Dist(l) = f x in l) l)
       in
