@@ -151,8 +151,8 @@ module Logic1 = struct
                       | Some(y, st') ->
                           Stream(fun () ->
                             Some((el, y), for_stack st' stck'))
-            in
-              for_stack st2 stack'
+              in
+                for_stack st2 stack'
     in
       Search(prod_stream st1 st2 [])
 
