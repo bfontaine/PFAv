@@ -284,47 +284,78 @@ let swap i j parray =
 open Prob
 
 (** looping functions; you may want to look at their type *)
-let rec for_to a b v f =
-  if a > b then return v
+
+(**
+ * See for_downto
+ * @param i int
+ * @param n int
+ * @param init 'a
+ * @param f int -> 'a -> 'a dist
+ * @return 'a Prob.dist
+ **)
+let rec for_to i n init f =
+  if i > n then return init
   else
-    bind (f a v) @@ fun v' ->
-    for_to (a + 1) b v' f
+    bind (f i init) (fun next ->
+      for_to (i + 1) n next f)
 
-let rec for_downto a b v f =
-  if a < b then return v
+(**
+ * For [i] to [n] with i > n, call [f] on [i] and the current element, starting
+ * at [init], then ...???
+ * @param i int
+ * @param n int
+ * @param init 'a
+ * @param f int -> 'a -> 'a dist
+ * @return 'a Prob.dist
+ **)
+let rec for_downto i n init f =
+  if i < n then return init
   else
-    bind (f a v) @@ fun v' ->
-    for_downto (a - 1) b v' f
+    (*val bind : 'a Prob.dist -> ('a -> 'b Prob.dist) -> 'b Prob.dist*)
+    bind (f i init) (fun next ->
+      for_downto (i - 1) n next f)
 
-(** example of use of looping functions (of no particular interest):
-    returns a persistent array of length n with, at each index i,
-    a random number between 0 and i *)
-let rand_parray n =
-  let init = parray_of_array (Array.make n 0) in
-  for_to 0 n init (fun i parr ->
-    bind (rand (i+1)) @@ fun v ->
-    return (PArray.add i v parr))
+(**
+ * Algorithm 1: N times, pick two integers i,j among [0..N-1], and
+ * swap the values of the array at indices i and j
+ *
+ * Use it like this to get a pretty printing:
+ * 
+ * # run compare (shuf1 your_array n |> Prob.map array_of_parray);;
+ *
+ * From my tests, best results happen when N is large (larger than the array
+ * size), but they're still biaised every time because the initial order of the
+ * array is *always* the configuration which is the most likely to be returned.
+ *
+ * Results:
+ *
+ * - Pi is the probability to get the array unchanged
+ * - Ps is the probability for each shuffled configuration
+ *
+ * We're using [n+] to denote the fact that the results are the same for the
+ * value [n] and above (as far as we can test).
+ *
+ *   size   N  Pi    Ps
+ *      2   1+  0.5   0.5                  <-- perfect shuffling here
+ *     
+ *      3   1   0.26  0.15*5
+ *      3   2   0.18  0.17*3,0.14*2
+ *      3   3   0.18  0.16*5
+ *      3   4   0.169 0.167*3,0.165*2
+ *      3   5+  ?     ?                    <-- stack overflow
+ *
+ *      4   1   0.16  0.06*6,0.05*8,0.03*3
+ *      4   2   0.09  0.06*6,0.03*8,0.03*6,0.02*3
+ *      4   3   0.07  0.05*6,0.04*8,0.04*3,0.03*6
+ *      4   4+  ?     ?                    <-- stack overflow
+ *
+ **)
+let shuf1 a n =
+  if n <= 0 then return (parray_of_array a)
+  else
+    let init = parray_of_array a in
+      for_to 0 n init (fun _ parr ->
+        let r = (rand (length parr)) in
+          bind (prod r r) (fun (i, j) ->
+            return (swap i j parr)))
 
-(** [rand_parray n] returns a [int PArray.t Prob.dist], a distribution
-    of persistent arrays; if we want to inspect the content of those
-    arrays, it's better to convert them back to normal arrays that can
-    be pretty-printed by the toplevel:
-      (rand_parray n |> Prob.map array_of_parray)
-
-    On my machine, "running" the probability distribution to get the
-    actual probabilities of each output returns the following result:
-
-    # run compare (rand_parray 2 |> map array_of_parray);;
-    - : (int array * float) list =
-    [([|0; 0; 0|], 0.166666666666666657);
-     ([|0; 0; 1|], 0.166666666666666657);
-     ([|0; 0; 2|], 0.166666666666666657);
-     ([|0; 1; 0|], 0.166666666666666657);
-     ([|0; 1; 1|], 0.166666666666666657);
-     ([|0; 1; 2|], 0.166666666666666657)]
-
-    Of course, the order of the result is not important: it is not
-    a problem if your code for Prob returns those result in
-    a different order. Remark that, as expected, each output comes out
-    with the same (uniform) probability.
-*)

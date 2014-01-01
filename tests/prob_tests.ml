@@ -37,6 +37,10 @@ let test_uniform1 () =
   let a = Prob.uniform [|17;42|] in
     assert_equal (Prob.run compare a) [(17,0.5); (42, 0.5)]
 
+let test_bind1 () =
+  (* TODO Prob.bind tests *)
+  ()
+
 let suite =
   "Prob tests" >:::
     ["test_rand1"    >:: test_rand1;
@@ -47,6 +51,7 @@ let suite =
      "test_sum1"     >:: test_sum1;
      "test_return1"  >:: test_return1;
      "test_uniform1" >:: test_uniform1;
+     "test_bind1"    >:: test_bind1;
     ]
 
 let _ =
