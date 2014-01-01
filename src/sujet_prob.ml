@@ -160,7 +160,9 @@ module Prob : PROB =
 
     let bind = fun (Dist l) f ->
       let ls =
-        (List.map (fun x -> let Dist(l) = f x in l) l)
+        (* [rev_map] is more efficient than [map] and we don't care
+         * about the order of results *)
+        (List.rev_map (fun x -> let Dist(l) = f x in l) l)
       in
         Dist(List.concat ls)
   end
@@ -323,39 +325,19 @@ let rec for_downto i n init f =
  * 
  * # run compare (shuf1 your_array n |> Prob.map array_of_parray);;
  *
- * From my tests, best results happen when N is large (larger than the array
- * size), but they're still biaised every time because the initial order of the
- * array is *always* the configuration which is the most likely to be returned.
+ * From my tests, this doesn't shuffle uniformly because the initial order is
+ * the most likely to be "generated". But when the array is shuffled, all orders
+ * are equally likely to be generated.
  *
- * Results:
- *
- * - Pi is the probability to get the array unchanged
- * - Ps is the probability for each shuffled configuration
- *
- * We're using [n+] to denote the fact that the results are the same for the
- * value [n] and above (as far as we can test).
- *
- *   size   N  Pi    Ps
- *      2   1+  0.5   0.5                  <-- perfect shuffling here
- *     
- *      3   1   0.26  0.15*5
- *      3   2   0.18  0.17*3,0.14*2
- *      3   3   0.18  0.16*5
- *      3   4   0.169 0.167*3,0.165*2
- *      3   5+  ?     ?                    <-- stack overflow
- *
- *      4   1   0.16  0.06*6,0.05*8,0.03*3
- *      4   2   0.09  0.06*6,0.03*8,0.03*6,0.02*3
- *      4   3   0.07  0.05*6,0.04*8,0.04*3,0.03*6
- *      4   4+  ?     ?                    <-- stack overflow
- *
+ * Known issues:
+ * - this implementation doesn't work with N>3 because of a stack overflow
  **)
-let shuf1 a n =
-  if n <= 0 then return (parray_of_array a)
-  else
-    let init = parray_of_array a in
+let shuf1 a =
+    let n = Array.length a
+    and init = parray_of_array a
+    in
       for_to 0 n init (fun _ parr ->
-        let r = (rand (length parr)) in
+        let r = (rand n) in
           bind (prod r r) (fun (i, j) ->
             return (swap i j parr)))
 
