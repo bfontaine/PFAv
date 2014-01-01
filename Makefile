@@ -13,17 +13,18 @@ PART1=sujet_search
 PART2=sujet_prob
 
 OCAMLFIND=ocamlfind
+OCAMLC=ocamlc -g
 
 .PHONY: test clean cleanall
 
 $(SRC)/%.cmi: $(SRC)/%.mli
-	ocamlc -c $<
+	$(OCAMLC) -c $<
 
 $(SRC)/%.cmo: $(SRC)/%.ml
-	ocamlc -c $<
+	$(OCAMLC) -c $<
 
 test: $(SRC)/$(PART1).cmi $(SRC)/$(PART2).cmo
-	@$(OCAMLFIND) ocamlc -I $(SRC) -o $(TESTS_EXE) -package oUnit -linkpkg -g \
+	@$(OCAMLFIND) $(OCAMLC) -I $(SRC) -o $(TESTS_EXE) -package oUnit -linkpkg -g \
 		$(SRC)/$(PART1).ml $(SRC)/$(PART2).ml $(TESTS)
 	@./$(TESTS_EXE)
 
