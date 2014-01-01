@@ -162,9 +162,14 @@ module Prob : PROB =
       let ls =
         (* [rev_map] is more efficient than [map] and we don't care
          * about the order of results *)
-        (List.rev_map (fun x -> let Dist(l) = f x in l) l)
+        (List.rev_map (fun x -> let Dist(res) = f x in res) l)
       in
-        Dist(List.concat ls)
+        (* optimized version of [Dist(List.concat ls)] which doesn't preserve
+         * the order of elements *)
+        match ls with
+        | [] -> Dist([])
+        | h::t ->
+            Dist(List.fold_left (fun acc el -> List.rev_append el acc) h t)
   end
 
 (** {2 Where you should go from here} *)
@@ -266,9 +271,27 @@ let parray_of_array arr =
   done;
   !parray
 
+(* Note: PArray.cardinal doesn't seem to be tail-recursive, so using
+ * array_of_parray to a get pretty printing sometimes lead to a stack overflow
+ *)
 let array_of_parray parray =
   Array.init (PArray.cardinal parray)
     (fun i -> PArray.find i parray)
+
+(**
+ * Instead of using:
+ *  run compare (function_on_parrays |> Prob.map array_of_parray);;
+ * Use:
+ *  array_probs_of_parray_probs (run compare (function_on_parrays));;
+ *
+ * This is more efficient and avoid stack overflows.
+ **)
+(* FIXME: Error: The type of this expression,
+ *          ('_a PArray.t * '_b) list -> ('_a array * '_b) list,
+ *        contains type variables that cannot be generalized
+ *)
+let array_probs_of_parray_probs =
+  List.map (fun (a, p) -> ((array_of_parray a), p))
 
 (** length of a persistent array *)
 let length = PArray.cardinal
@@ -287,33 +310,15 @@ open Prob
 
 (** looping functions; you may want to look at their type *)
 
-(**
- * See for_downto
- * @param i int
- * @param n int
- * @param init 'a
- * @param f int -> 'a -> 'a dist
- * @return 'a Prob.dist
- **)
 let rec for_to i n init f =
   if i > n then return init
   else
     bind (f i init) (fun next ->
       for_to (i + 1) n next f)
 
-(**
- * For [i] to [n] with i > n, call [f] on [i] and the current element, starting
- * at [init], then ...???
- * @param i int
- * @param n int
- * @param init 'a
- * @param f int -> 'a -> 'a dist
- * @return 'a Prob.dist
- **)
 let rec for_downto i n init f =
   if i < n then return init
   else
-    (*val bind : 'a Prob.dist -> ('a -> 'b Prob.dist) -> 'b Prob.dist*)
     bind (f i init) (fun next ->
       for_downto (i - 1) n next f)
 
@@ -321,16 +326,13 @@ let rec for_downto i n init f =
  * Algorithm 1: N times, pick two integers i,j among [0..N-1], and
  * swap the values of the array at indices i and j
  *
- * Use it like this to get a pretty printing:
- * 
- * # run compare (shuf1 your_array n |> Prob.map array_of_parray);;
+ * Use it like this to get pretty printing:
+ *   # array_probs_of_parray_probs (run compare (shuf1 your_array n));;
  *
  * From my tests, this doesn't shuffle uniformly because the initial order is
- * the most likely to be "generated". But when the array is shuffled, all orders
- * are equally likely to be generated.
+ * the most likely to be "generated".
  *
- * Known issues:
- * - this implementation doesn't work with N>3 because of a stack overflow
+ * I could test with N = 1, 2, 3, and 4. N=5 took too much time.
  **)
 let shuf1 a =
     let n = Array.length a
@@ -340,4 +342,39 @@ let shuf1 a =
         let r = (rand n) in
           bind (prod r r) (fun (i, j) ->
             return (swap i j parr)))
+
+(**
+ * Algorithm 2: assign to each value of the array a random "weight"
+ * in [0..N-1], sort the values by their weights, and return the
+ * corresponding array
+ *
+ * Use it like this to get pretty printing:
+ *   # array_probs_of_parray_probs (run compare (shuf2 your_array n));;
+ *
+ **)
+let shuf2 a =
+  let n = Array.length a
+  in
+    (* TODO *)
+    return a
+
+(**
+ * Algorithm 3: Fisher-Yates, modern version as described here:
+ *  https://en.wikipedia.org/wiki/Fisher-Yates_shuffle#The_modern_algorithm
+ *
+ * Use it like this to get pretty printing:
+ *   # array_probs_of_parray_probs (run compare (fisher_yates your_array n));;
+ *
+ * As we already know, this algorithm is uniform, each possible output is as
+ * likely to happen than another. It's also significantly more efficient than
+ * [shuf1] (TODO compare to shuf2), I was able to run it with arrays of up to 9
+ * elements.
+ **)
+let fisher_yates a =
+  let init = parray_of_array a
+  and n    = Array.length a
+  in
+    for_downto (n - 1) 1 init (fun i parr ->
+      bind (rand (i+1)) (fun j ->
+        return (swap i j parr)))
 
