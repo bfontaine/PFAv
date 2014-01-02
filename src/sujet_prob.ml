@@ -278,20 +278,8 @@ let array_of_parray parray =
   Array.init (PArray.cardinal parray)
     (fun i -> PArray.find i parray)
 
-(**
- * Instead of using:
- *  run compare (function_on_parrays |> Prob.map array_of_parray);;
- * Use:
- *  array_probs_of_parray_probs (run compare (function_on_parrays));;
- *
- * This is more efficient and avoid stack overflows.
- **)
-(* FIXME: Error: The type of this expression,
- *          ('_a PArray.t * '_b) list -> ('_a array * '_b) list,
- *        contains type variables that cannot be generalized
- *)
-let array_probs_of_parray_probs =
-  List.map (fun (a, p) -> ((array_of_parray a), p))
+let array_probs_of_parray_probs (li : ('a PArray.t * float) list) =
+  List.map (fun (a, p) -> ((array_of_parray a), p)) li
 
 (** length of a persistent array *)
 let length = PArray.cardinal
