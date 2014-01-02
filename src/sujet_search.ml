@@ -138,16 +138,25 @@ module Logic1 = struct
     let rec prod_stream st1 st2 stack =
       let Stream(s1) = st1 in
         match s1 () with
-        | None -> nil
+        | None ->
+            nil (* the issue is here *)
         | Some (x, st1') ->
+            (* stack keeps a reversed list of st1's elements *)
             let stack' = x::stack in
+              (* for each element, we loop on the stack to go backward on st1
+               * and at the same time forward on st2 *)
               let rec for_stack st stck =
                 match stck with
+                (* if the stack is empty, we move to st1's next element *)
                 | [] -> prod_stream st1' st2 stack'
                 | el::stck' ->
                     let Stream(s) = st in
                       match s () with
+                      (* if st2 is empty, we move to st1's next element *)
                       | None -> prod_stream st1' st2 stack'
+                      (* if not, we add a couple with the top of the stack and
+                       * st2's first element, and continue with the rest of the
+                       * stack and the rest of st2 *)
                       | Some(y, st') ->
                           Stream(fun () ->
                             Some((el, y), for_stack st' stck'))
