@@ -96,7 +96,7 @@ module Logic1 = struct
    *
    * This gives us something like that:
    *
-   *  (X,A) 
+   *  (X,A)
    *  (X,B) (Y,A)
    *  (X,C) (Y,B) (Z,A)
    *  (X,D) (Y,C) (Z,B)
@@ -113,7 +113,9 @@ module Logic1 = struct
    *     stream (x_i, y_j)
    *     pop stack2
    *
-   * The issue is that we re-compute S2's solutions for each S1's one.
+   * The issue is that we re-compute S2's solutions for each S1's one. We could
+   * store S2's solutions in a list and then match on it, but it's dealing time
+   * for memory, which is not always better.
    *
    * Example:
    *
@@ -133,6 +135,41 @@ module Logic1 = struct
    * (3,B)
    *       --> problem here, (4,B) is missing (FIXME)
    *           this is an issue only for finite streams
+   *
+   * Another possibility would be to iterate in reversed "L":
+   *  A B C      A           B           C
+   *  D E F  -->       --> D E   -->     F
+   *  G H I                          G H I
+   *
+   * -> A, B E D, C F I H G
+   *
+   * pseudo-algo:
+   *   // st1  & st2:  original streams
+   *   // st1' & st2': current state of streams (beginning: st1'=st1, st2'=st2)
+   *   // i: indice of where we are (beginning: 0)
+   *   let rec prod_stream st1' st2' i =
+   *     if st1' empty AND st2' empty -> nil
+   *     if st1' empty AND st2' not empty ->
+   *       for e in st2' do
+   *         for f in st1 do
+   *           add(f, e)
+   *     if st1' not empty AND st2' empty ->
+   *       for e in st1' do
+   *         for f in st2 do
+   *           add(e,f)
+   *     if st1' not empty AND st2' not empty ->
+   *       // C F I
+   *       for j=0 to i do
+   *         add (st1'.head, st2.head)
+   *         continue 'for' with st2 = st2.tail
+   *       // G H
+   *       for j=0 to i-1 do
+   *         add (st1.head, st2'.head)
+   *         continue 'for' with st1 = st1.tail
+   *
+   * While this algo, I think, correct, it's harder to implement and will take
+   * too much time for a large, probably ugly, piece of code, so I won't
+   * implement it and stick with the first one.
    **)
   let prod = fun (Search st1) (Search st2) ->
     let rec prod_stream st1 st2 stack =
