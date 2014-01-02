@@ -290,13 +290,10 @@ let swap i j parray =
   |> PArray.add i (PArray.find j parray)
   |> PArray.add j (PArray.find i parray)
 
-
-(** Remark: feel free, of course, to add additional convenience
-    functions, according to the needs of the code you'll develop. *)
+let set = PArray.add
+let get = PArray.find
 
 open Prob
-
-(** looping functions; you may want to look at their type *)
 
 let rec for_to i n init f =
   if i > n then return init
@@ -315,7 +312,7 @@ let rec for_downto i n init f =
  * swap the values of the array at indices i and j
  *
  * Use it like this to get pretty printing:
- *   # array_probs_of_parray_probs (run compare (shuf1 your_array n));;
+ *   # array_probs_of_parray_probs (run compare (shuf1 your_array));;
  *
  * From my tests, this doesn't shuffle uniformly because the initial order is
  * the most likely to be "generated".
@@ -337,21 +334,39 @@ let shuf1 a =
  * corresponding array
  *
  * Use it like this to get pretty printing:
- *   # array_probs_of_parray_probs (run compare (shuf2 your_array n));;
+ *   # array_probs_of_parray_probs (run compare (shuf2 your_array));;
+ *
+ * This algorithm is not uniform, like the previous one the original ordering
+ * is the most likely to be "generated", and here the reversed order is the
+ * least likely to be generated. According to my tests, the less shuffled the
+ * array is, the more probable the order is. That is, the most probable
+ * orderings are close to the initial one.
  *
  **)
 let shuf2 a =
   let n = Array.length a
+  (* (weight, value) *)
+  and init = parray_of_array (Array.map (fun x -> (0,x)) a)
   in
-    (* TODO *)
-    return a
+    bind
+      (for_to 0 (n-1) init (fun i parr ->
+        bind (rand n) (fun r ->
+          return @@ set i (r, a.(i)) parr)))
+      (fun parr ->
+        (* this is not really efficient, there may be a more efficient way to
+         * sort a PArray *)
+        let arr =
+          array_of_parray parr
+        in
+          Array.sort compare arr;
+          return @@ parray_of_array (Array.map snd arr))
 
 (**
  * Algorithm 3: Fisher-Yates, modern version as described here:
  *  https://en.wikipedia.org/wiki/Fisher-Yates_shuffle#The_modern_algorithm
  *
  * Use it like this to get pretty printing:
- *   # array_probs_of_parray_probs (run compare (fisher_yates your_array n));;
+ *   # array_probs_of_parray_probs (run compare (fisher_yates your_array));;
  *
  * As we already know, this algorithm is uniform, each possible output is as
  * likely to happen than another. It's also significantly more efficient than
