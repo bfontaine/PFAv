@@ -317,7 +317,7 @@ let rec for_downto i n init f =
  * From my tests, this doesn't shuffle uniformly because the initial order is
  * the most likely to be "generated".
  *
- * I could test with N = 1, 2, 3, and 4. N=5 took too much time.
+ * I have been able to test with N = {1..4}. N=5 took too much time.
  **)
 let shuf1 a =
     let n = Array.length a
@@ -336,11 +336,16 @@ let shuf1 a =
  * Use it like this to get pretty printing:
  *   # array_probs_of_parray_probs (run compare (shuf2 your_array));;
  *
- * This algorithm is not uniform, like the previous one the original ordering
- * is the most likely to be "generated", and here the reversed order is the
- * least likely to be generated. According to my tests, the less shuffled the
- * array is, the more probable the order is. That is, the most probable
- * orderings are close to the initial one.
+ * This algorithm is not uniform, like the previous one the
+ * original ordering is the most likely to be "generated", and here the
+ * reversed order is the least likely to be generated. According to my tests,
+ * the less shuffled the array is, the more probable the order is. That is, the
+ * most probable orderings are close to the initial one.
+ * I would say that while this one is more efficient than [shuf1], it's worse
+ * because the initial ordering is twice more likely to be "generated" than any
+ * other order.
+ *
+ * I have been able to test with N = {1..7}, N=8 used too much time.
  *
  **)
 let shuf2 a =
@@ -370,7 +375,7 @@ let shuf2 a =
  *
  * As we already know, this algorithm is uniform, each possible output is as
  * likely to happen than another. It's also significantly more efficient than
- * [shuf1] (TODO compare to shuf2), I was able to run it with arrays of up to 9
+ * [shuf1], I have been able to run it with arrays of up to 9
  * elements.
  **)
 let fisher_yates a =
