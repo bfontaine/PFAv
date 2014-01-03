@@ -216,6 +216,26 @@ let test_logic1_prod_2x3 () =
       assert_solved
         [(1,3);(1,4);(1,5);(2,3);(2,4);(2,5)] (Logic1.solve 20 p)
 
+let test_logic1_prod_3xinf () =
+  let s1 = mk_stream3 1 2 3
+  and s2 = number_stream
+  in
+    let p =
+      Logic1.guard (fun (_,y) -> y = 1)
+        (Logic1.prod (Logic1.stream s1) (Logic1.stream s2))
+    in
+      assert_solved [(1,1);(2,1);(3,1)] (Logic1.solve 20 p)
+
+let test_logic1_prod_infx3 () =
+  let s1 = number_stream
+  and s2 = mk_stream3 1 2 3
+  in
+    let p =
+      Logic1.guard (fun (x,_) -> x = 1)
+        (Logic1.prod (Logic1.stream s1) (Logic1.stream s2))
+    in
+      assert_solved [(1,1);(1,2);(1,3)] (Logic1.solve 3 p)
+
 let test_logic1_prod_3x2 () =
   let s1 = mk_stream3 1 2 3
   and s2 = mk_stream2 4 5
@@ -225,6 +245,24 @@ let test_logic1_prod_3x2 () =
     in
       assert_solved
         [(1,4);(1,5);(2,4);(2,5);(3,4);(3,5)] (Logic1.solve 20 p)
+
+(* teacher's test *)
+let test_logic1 () =
+  let open Logic1 in
+  let number = stream number_stream in
+  let posnum = guard (fun n -> n > 0) number in
+
+  let pytha =
+    (* we search for triples pythagorean triples (a, b, c):
+         a² + b² = c²
+       to avoid duplication of solutions, we also request (a < b) *)
+    let ab =
+      prod posnum posnum
+      |> guard (fun (a,b) -> a < b) in
+    prod ab posnum
+    |> guard (fun ((a,b),c) -> a*a+b*b=c*c) in
+
+  ignore (solve 10 pytha)
 
 (**************)
 
@@ -245,14 +283,23 @@ let suite =
      "test_logic1_map"          >:: test_logic1_map;
      "test_logic1_guard"        >:: test_logic1_guard;
      "test_logic1_sum"          >:: test_logic1_sum;
+
      "test_logic1_prod_fail"    >:: test_logic1_prod_fail;
+
      "test_logic1_prod_1x1"     >:: test_logic1_prod_1x1;
      "test_logic1_prod_2x2"     >:: test_logic1_prod_2x2;
+
      "test_logic1_prod_1x2"     >:: test_logic1_prod_1x2;
      "test_logic1_prod_2x1"     >:: test_logic1_prod_2x1;
      "test_logic1_prod_2x3"     >:: test_logic1_prod_2x3;
      "test_logic1_prod_3x2"     >:: test_logic1_prod_3x2;
+
+     "test_logic1_prod_3xinf"   >:: test_logic1_prod_3xinf;
+     "test_logic1_prod_infx3"   >:: test_logic1_prod_infx3;
+
      "test_logic1_prod_infxinf" >:: test_logic1_prod_infxinf;
+
+     "test_logic1"              >:: test_logic1;
     ]
 
 let _ =
