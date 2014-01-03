@@ -4,6 +4,9 @@ open Sujet_search
 let assert_success () =
   assert_bool "" true
 
+let assert_sorted_eq l1 l2 =
+  assert_equal (List.sort compare l1) (List.sort compare l2)
+
 let s1 =
   Stream(fun () ->
     Some(42, Stream(fun () ->
@@ -14,6 +17,16 @@ let l1 =
 
 let l2 =
   ["foo";"bar";"trololol"]
+
+(* quick helpers for lazy people *)
+let mk_stream1 x =
+  Stream(fun () -> Some(x, Stream(fun () -> None)))
+
+let mk_stream2 x y =
+  Stream(fun () -> Some(x, mk_stream1 y))
+
+let mk_stream3 x y z =
+  Stream(fun () -> Some(x, mk_stream2 y z))
 
 (*** Stream basics ***)
 
@@ -113,28 +126,91 @@ let test_logic1_prod_fail () =
         assert_equal (Logic1.solve 20 p) [];
     end
 
-(* TODO more tests for Logic1.prod *)
+let test_logic1_prod_1x1 () =
+  let s =
+    Logic1.stream (mk_stream1 42)
+  in
+    assert_equal (Logic1.solve 20 (Logic1.prod s s)) [(42,42)]
+
+let test_logic1_prod_1x2 () =
+  let s1 = mk_stream1 42
+  and s2 = mk_stream2 17 42
+  in
+    let p =
+      Logic1.prod (Logic1.stream s1) (Logic1.stream s2)
+    in
+      assert_sorted_eq (Logic1.solve 20 p) [(42,17);(42,42)]
+
+let test_logic1_prod_2x1 () =
+  let s1 = mk_stream2 17 42
+  and s2 = mk_stream1 42
+  in
+    let p =
+      Logic1.prod (Logic1.stream s1) (Logic1.stream s2)
+    in
+      assert_sorted_eq (Logic1.solve 20 p) [(17,42);(42,42)]
+
+let test_logic1_prod_2x2 () =
+  let s1 = mk_stream2 1 2
+  and s2 = mk_stream2 3 4
+  in
+    let p =
+      Logic1.prod (Logic1.stream s1) (Logic1.stream s2)
+    in
+      assert_sorted_eq (Logic1.solve 20 p) [(1,3);(1,4);(2,3);(2,4)]
+
+let test_logic1_prod_infxinf () =
+  let n = Logic1.stream number_stream in
+    let p = Logic1.guard (fun (x,_) -> x = 1) (Logic1.prod n n) in
+      assert_sorted_eq (Logic1.solve 3 p) [(1,0);(1,1);(1,2)]
+
+let test_logic1_prod_2x3 () =
+  let s1 = mk_stream2 1 2
+  and s2 = mk_stream3 3 4 5
+  in
+    let p =
+      Logic1.prod (Logic1.stream s1) (Logic1.stream s2)
+    in
+      assert_sorted_eq
+        (Logic1.solve 20 p) [(1,3);(1,4);(1,5);(2,3);(2,4);(2,5)]
+
+let test_logic1_prod_3x2 () =
+  let s1 = mk_stream3 1 2 3
+  and s2 = mk_stream2 4 5
+  in
+    let p =
+      Logic1.prod (Logic1.stream s1) (Logic1.stream s2)
+    in
+      assert_sorted_eq
+        (Logic1.solve 20 p) [(1,4);(1,5);(2,4);(2,5);(3,4);(3,5)]
 
 (**************)
 
 let suite =
   "Stream tests" >:::
-    ["test_nil"              >:: test_nil;
-     "test_cons"             >:: test_cons;
-     "test_one"              >:: test_one;
-     "test_lcons"            >:: test_lcons;
-     "test_get"              >:: test_get;
-     "test_number_stream"    >:: test_number_stream;
-     "test_take"             >:: test_take;
-     "test_stream_of_list"   >:: test_stream_of_list;
+    ["test_nil"                 >:: test_nil;
+     "test_cons"                >:: test_cons;
+     "test_one"                 >:: test_one;
+     "test_lcons"               >:: test_lcons;
+     "test_get"                 >:: test_get;
+     "test_number_stream"       >:: test_number_stream;
+     "test_take"                >:: test_take;
+     "test_stream_of_list"      >:: test_stream_of_list;
 
-     "test_logic1_fail"      >:: test_logic1_fail;
-     "test_logic1_return"    >:: test_logic1_return;
-     "test_logic1_stream"    >:: test_logic1_stream;
-     "test_logic1_map"       >:: test_logic1_map;
-     "test_logic1_guard"     >:: test_logic1_guard;
-     "test_logic1_sum"       >:: test_logic1_sum;
-     "test_logic1_prod_fail" >:: test_logic1_prod_fail;
+     "test_logic1_fail"         >:: test_logic1_fail;
+     "test_logic1_return"       >:: test_logic1_return;
+     "test_logic1_stream"       >:: test_logic1_stream;
+     "test_logic1_map"          >:: test_logic1_map;
+     "test_logic1_guard"        >:: test_logic1_guard;
+     "test_logic1_sum"          >:: test_logic1_sum;
+     "test_logic1_prod_fail"    >:: test_logic1_prod_fail;
+     "test_logic1_prod_1x1"     >:: test_logic1_prod_1x1;
+     "test_logic1_prod_2x2"     >:: test_logic1_prod_2x2;
+     "test_logic1_prod_1x2"     >:: test_logic1_prod_1x2;
+     "test_logic1_prod_2x1"     >:: test_logic1_prod_2x1;
+     "test_logic1_prod_2x3"     >:: test_logic1_prod_2x3;
+     "test_logic1_prod_3x2"     >:: test_logic1_prod_3x2;
+     "test_logic1_prod_infxinf" >:: test_logic1_prod_infxinf;
     ]
 
 let _ =
