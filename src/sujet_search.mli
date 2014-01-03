@@ -6,9 +6,6 @@ type ('a, 'b) sum = Left of 'a | Right of 'b
 type 'a stream = Stream of (unit -> ('a * 'a stream) option)
 (** (possibly infinite) streams of values *)
 
-(** you have to implement the functions below; this may not be very
-    useful for the rest of the project, but consider this a warmup
-    exercise *)
 val nil : 'a stream
 val cons : 'a -> 'a stream -> 'a stream
 
@@ -79,50 +76,10 @@ module Logic1 :
     val guard : ('a -> bool) -> 'a search -> 'a search
     (** the solutions of [guard condition prob] are the solutions of
         [prob] that also satisfy [condition]. *)
+
+    (** Custom additions *)
+
+    val guardi : (int -> 'a -> bool) -> 'a search -> 'a search
+    (** same as [guard], but the condition takes the current index as its first
+        argument *)
   end
-
-(** Evaluation
-
-The following code should work:
-
-{[
-let () =
-  let open Logic1 in
-  let number = stream number_stream in
-  let posnum = guard (fun n -> n > 0) number in
-
-  let pytha =
-    (* we search for triples pythagorean triples (a, b, c):
-         a² + b² = c²
-       to avoid duplication of solutions, we also request (a < b) *)
-    let ab =
-      prod posnum posnum
-      |> guard (fun (a,b) -> a < b) in
-    prod ab posnum
-    |> guard (fun ((a,b),c) -> a*a+b*b=c*c) in
-
-  solve 10 pytha |> List.iter
-      (fun ((a,b),c) -> Printf.printf "%d² + %d² = %d²\n" a b c) 
-]}
-
-    A difficulty with this exercize is that [posnumber] has an
-    infinite number of solutions. If you haven't defined [prod]
-    carefully enough, this program may loop without returning
-    anything, despite having simple solutions.
-
-    PS: (|>) and (@@) are infix operators defined in OCaml 4.01 as
-    let (@@) f x = f x
-    let (|>) x f = f x
-
-    If you have an older OCaml version, just define them
-    at the top of your file.
-*)
-
-
-
-
-(** {1 Second part: distribution probabilities}
-
-
-
-*)

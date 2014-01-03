@@ -57,6 +57,18 @@ module Logic1 = struct
     in
       Search(map_stream fn st)
 
+  let guardi = fun test (Search st) ->
+    let rec keep_if i stream test =
+      let Stream(stf) = stream in
+        match stf () with
+        | None -> nil
+        | Some(x, stf') ->
+            if (test i x)
+            then Stream(fun () -> Some(x, keep_if (i+1) stf' test))
+            else (keep_if (i+1) stf' test)
+    in
+      Search(keep_if 0 st test)
+
   let guard = fun test (Search st) ->
     let rec keep_if stream test =
       let Stream(stf) = stream in
