@@ -146,7 +146,7 @@ module Logic1 = struct
    * (4,A)
    * (3,B)
    *       --> problem here, (4,B) is missing (FIXME)
-   *           this is an issue only for finite streams
+   *           this is an issue which occurs when the first stream is finite
    *
    * Another possibility would be to iterate in reversed "L":
    *  A B C      A           B           C
@@ -182,12 +182,27 @@ module Logic1 = struct
    * While this algo, I think, correct, it's harder to implement and will take
    * too much time for a large, probably ugly, piece of code, so I won't
    * implement it and stick with the first one.
+   *
+   * Yet another algo would be a fix for the first one where when at least one
+   * stream is finite and they're not of the same length, we could "pretend"
+   * they're infinite with dummy values at their end and continue until our
+   * diagonal reach the last possible element (if both are finite, the last
+   * element is the pair formed by S1's last element and S2's last one).
+   *
+   * Example ('o' are real elements, dots are dummy ones):
+   * o o o    o o o .
+   * o o o -> o o o
+   *          . .
+   *          .
+   *
+   * But how can we represent dummy elements without breaking the Stream type?
    **)
   let prod = fun (Search st1) (Search st2) ->
     let rec prod_stream st1 st2 stack =
       let Stream(s1) = st1 in
         match s1 () with
         | None ->
+            (* s1 is empty *)
             nil (* the issue is here *)
         | Some (x, st1') ->
             (* stack keeps a reversed list of st1's elements *)
