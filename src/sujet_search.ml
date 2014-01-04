@@ -44,7 +44,7 @@ module Logic1 = struct
 
   let stream st = Search st
 
-  let solve = fun n (Search st) ->
+  let rec solve = fun n (Search st) ->
     take st n
 
   let map = fun fn (Search st) ->
@@ -98,135 +98,90 @@ module Logic1 = struct
     in
       Search(sum_stream st1 st2)
 
-  (* The idea is to stream the product of two series by 'diagonals', as if
-   * the pairs were represented in a matrix as below:
+  (* The .prod function took a lot of time to be correctly implemented, and
+   * various strategies have been tested. The one which is implemented below
+   * works with a 'diagonal': We progress through the matrice with a diagonal
+   * North-East -> South-West. To be clear, here is the thought model:
+   * 
+   *  the carthesian product is a (possibly infinite) matrice where columns are
+   *  S1's values (S1 is the first stream, S2 is the second one), and lines are
+   *  S2's. For example, prod {1, 2} {"a", "b"} gives:
    *
-   * .     A     B     C     D
-   * X (X,A) (X,B) (X,C) (X,D)
-   * Y (Y,A) (Y,B) (Y,C) (Y,D)
-   * Z (Z,A) (Z,B) (Z,C) (Z,D)
+   *  |  -S1->
+   * S2  1a 2a
+   *  |  1b 2b
+   *  V
    *
-   * This gives us something like that:
+   * We keep track of S1's elements in a stack and for each element, we add it
+   * on the stack, then enter a subroutine with a copy of this stack which
+   * loops on it and at each time pick S2's next element and the top of the
+   * stack, create the pair and continues until S2 and/or the stack are empty.
+   * Then the main routine continues to S1's next element.
    *
-   *  (X,A)
-   *  (X,B) (Y,A)
-   *  (X,C) (Y,B) (Z,A)
-   *  (X,D) (Y,C) (Z,B)
-   *  (Y,D) (Z,C)
-   *  (Z,D)
-   *
-   * The algorithm in pseudo-code:
-   *
-   * stack = []
-   * for x_i in S1:
-   *   stack << x_i
-   *   stack2 = stack
-   *   for y_j in S2 AND while stack2 not empty:
-   *     stream (x_i, y_j)
-   *     pop stack2
-   *
-   * The issue is that we re-compute S2's solutions for each S1's one. We could
-   * store S2's solutions in a list and then match on it, but it's dealing time
-   * for memory, which is not always better.
-   *
-   * Example:
-   *
-   * with S1 = [1,2,3,4]
-   *      S2 = [A,B]
-   *
-   * stack = [1]
-   * (1,A)
-   * stack = [1,2]
-   * (2,A)
-   * (1,B)
-   * stack = [1,2,3]
-   * (3,A)
-   * (2,B)
-   * stack = [1,2,3,4]
-   * (4,A)
-   * (3,B)
-   *       --> problem here, (4,B) is missing (FIXME)
-   *           this is an issue which occurs when the first stream is finite
-   *
-   * Another possibility would be to iterate in reversed "L":
-   *  A B C      A           B           C
-   *  D E F  -->       --> D E   -->     F
-   *  G H I                          G H I
-   *
-   * -> A, B E D, C F I H G
-   *
-   * pseudo-algo:
-   *   // st1  & st2:  original streams
-   *   // st1' & st2': current state of streams (beginning: st1'=st1, st2'=st2)
-   *   // i: indice of where we are (beginning: 0)
-   *   let rec prod_stream st1' st2' i =
-   *     if st1' empty AND st2' empty -> nil
-   *     if st1' empty AND st2' not empty ->
-   *       for e in st2' do
-   *         for f in st1 do
-   *           add(f, e)
-   *     if st1' not empty AND st2' empty ->
-   *       for e in st1' do
-   *         for f in st2 do
-   *           add(e,f)
-   *     if st1' not empty AND st2' not empty ->
-   *       // C F I
-   *       for j=0 to i do
-   *         add (st1'.head, st2.head)
-   *         continue 'for' with st2 = st2.tail
-   *       // G H
-   *       for j=0 to i-1 do
-   *         add (st1.head, st2'.head)
-   *         continue 'for' with st1 = st1.tail
-   *
-   * While this algo, I think, correct, it's harder to implement and will take
-   * too much time for a large, probably ugly, piece of code, so I won't
-   * implement it and stick with the first one.
-   *
-   * Yet another algo would be a fix for the first one where when at least one
-   * stream is finite and they're not of the same length, we could "pretend"
-   * they're infinite with dummy values at their end and continue until our
-   * diagonal reach the last possible element (if both are finite, the last
-   * element is the pair formed by S1's last element and S2's last one).
-   *
-   * Example ('o' are real elements, dots are dummy ones):
-   * o o o    o o o .
-   * o o o -> o o o
-   *          . .
-   *          .
-   *
-   * But how can we represent dummy elements without breaking the Stream type?
+   * The problem of this implementation is that on products where S1 is finite,
+   * pairs below the diagonale are never computed, in our previous example '2b'
+   * is not in the product. I spent a few hours trying to fix this to work with
+   * all kind of products, and tested other implementations, for example by
+   * walking the matrice using reversed "L" (in our example, this would give us
+   * 1a, then 2a, 2b, 1b), but it was not elegant and didn't work properly. I
+   * then went back on my original implementation and added 'prod_finite_s1'
+   * which is called when we reach S1's end. It takes the stack of its
+   * elements, and it add the missing elements to the product. It also works if
+   * S1 is finite but not S2.
    **)
-  let prod = fun (Search st1) (Search st2) ->
-    let rec prod_stream st1 st2 stack =
-      let Stream(s1) = st1 in
-        match s1 () with
-        | None ->
-            (* s1 is empty *)
-            nil (* the issue is here *)
-        | Some (x, st1') ->
-            (* stack keeps a reversed list of st1's elements *)
-            let stack' = x::stack in
-              (* for each element, we loop on the stack to go backward on st1
-               * and at the same time forward on st2 *)
-              let rec for_stack st stck =
-                match stck with
-                (* if the stack is empty, we move to st1's next element *)
-                | [] -> prod_stream st1' st2 stack'
-                | el::stck' ->
-                    let Stream(s) = st in
-                      match s () with
-                      (* if st2 is empty, we move to st1's next element *)
-                      | None -> prod_stream st1' st2 stack'
-                      (* if not, we add a couple with the top of the stack and
-                       * st2's first element, and continue with the rest of the
-                       * stack and the rest of st2 *)
-                      | Some(y, st') ->
-                          Stream(fun () ->
-                            Some((el, y), for_stack st' stck'))
-              in
-                for_stack st2 stack'
-    in
-      Search(prod_stream st1 st2 [])
 
+  (** this is an helper for 'prod', see the comment above *)
+  let prod_finite_s1 stck s2 =
+
+    let rec line els1 val2 next =
+      match els1 with
+      | [] -> next ()
+      | e::els1' ->
+          Stream(fun () ->
+            Some((e, val2), line els1' val2 next))
+
+    and each_line stk s2 els =
+      match (let Stream(s) = s2 in s()) with
+      | None -> nil
+      | Some(y, s2') ->
+          line els y (fun () ->
+            match stk with
+            | e::stk' ->
+                each_line stk' s2' (e::els)
+            | [] ->
+                each_line stk s2' els)
+
+    in
+      each_line stck s2 []
+  
+  let prod = fun (Search ss1) (Search ss2) ->
+    let rec prod_stream st1 st2 stack =
+      match (let Stream(s) = st1 in s ()) with
+      | None ->
+          (* s1 is empty => ss1 is finite *)
+          prod_finite_s1 stack ss2
+      | Some (x, st1') ->
+          (* stack keeps a reversed list of st1's elements *)
+          let stack' = x::stack in
+            (* for each element, we loop on the stack to go backward on st1
+             * and at the same time forward on st2 *)
+            let rec for_stack st stck =
+              match stck with
+              (* if the stack is empty, we move to st1's next element *)
+              | [] -> prod_stream st1' st2 stack'
+              (* if not... *)
+              | el::stck' ->
+                  match (let Stream(s) = st in s ()) with
+                  (* if st2 is empty, we move to st1's next element *)
+                  | None -> prod_stream st1' st2 stack'
+                  (* if not, we add a pair with the top of the stack
+                   * and st2's first element, and continue with the rest
+                   * of the stack and the rest of st2 *)
+                  | Some(y, st') ->
+                      Stream(fun () ->
+                        Some((el, y), for_stack st' stck'))
+            in
+              for_stack st2 stack'
+      in
+        Search(prod_stream ss1 ss2 [])
 end
