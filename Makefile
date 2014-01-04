@@ -30,7 +30,7 @@ test: $(SRC)/$(PART1).cmi $(SRC)/$(PART2).cmo
 
 autotest:
 	@# 'gem install kicker'
-	@# use 'gtimeout' on osx, 'timeout' on Linux (from coreutils)
+	@# use 'gtimeout' on OSX, 'timeout' on Linux (from coreutils)
 	kicker -ce "gtimeout 4 make test" src
 
 clean:
