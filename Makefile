@@ -15,7 +15,7 @@ PART2=sujet_prob
 OCAMLFIND=ocamlfind
 OCAMLC=ocamlc -g
 
-.PHONY: test clean cleanall
+.PHONY: test autotest clean cleanall
 
 $(SRC)/%.cmi: $(SRC)/%.mli
 	$(OCAMLC) -c $<
@@ -27,6 +27,11 @@ test: $(SRC)/$(PART1).cmi $(SRC)/$(PART2).cmo
 	@$(OCAMLFIND) $(OCAMLC) -I $(SRC) -o $(TESTS_EXE) -package oUnit -linkpkg -g \
 		$(SRC)/$(PART1).ml $(SRC)/$(PART2).ml $(TESTS)
 	@./$(TESTS_EXE)
+
+autotest:
+	@# 'gem install kicker'
+	@# use 'gtimeout' on osx, 'timeout' on Linux (from coreutils)
+	kicker -ce "gtimeout 4 make test" src
 
 clean:
 	find . -name *~ -delete
