@@ -224,7 +224,7 @@ let test_logic1_prod_3xinf () =
       Logic1.guard (fun (_,y) -> y = 1)
         (Logic1.prod (Logic1.stream s1) (Logic1.stream s2))
     in
-      assert_solved [(1,1);(2,1);(3,1)] (Logic1.solve 20 p)
+      assert_solved [(1,1);(2,1);(3,1)] (Logic1.solve 3 p)
 
 let test_logic1_prod_infx3 () =
   let s1 = number_stream
@@ -296,7 +296,6 @@ let suite =
 
      "test_logic1_prod_3xinf"   >:: test_logic1_prod_3xinf;
      "test_logic1_prod_infx3"   >:: test_logic1_prod_infx3;
-
      "test_logic1_prod_infxinf" >:: test_logic1_prod_infxinf;
 
      "test_logic1"              >:: test_logic1;
