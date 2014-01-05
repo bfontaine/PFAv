@@ -145,6 +145,11 @@ let test_logic1_guard () =
     let s = Logic1.guard g (Logic1.stream number_stream) in
       assert_equal ~printer:plint [0;3;6;9] (Logic1.solve 4 s)
 
+let test_logic1_guardi () =
+  let g = (fun i x -> (x mod 3 == 0 && i > 2)) in
+    let s = Logic1.guardi g (Logic1.stream number_stream) in
+    assert_equal ~printer:plint [3;6;9;12] (Logic1.solve 4 s)
+
 let test_logic1_sum () =
   let s1 = Logic1.stream (stream_of_list l1)
   and s2 = Logic1.stream (stream_of_list l2) in
@@ -282,6 +287,7 @@ let suite =
      "test_logic1_stream"       >:: test_logic1_stream;
      "test_logic1_map"          >:: test_logic1_map;
      "test_logic1_guard"        >:: test_logic1_guard;
+     "test_logic1_guardi"       >:: test_logic1_guardi;
      "test_logic1_sum"          >:: test_logic1_sum;
 
      "test_logic1_prod_fail"    >:: test_logic1_prod_fail;
