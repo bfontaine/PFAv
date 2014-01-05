@@ -63,9 +63,10 @@ module Logic1 = struct
         match stf () with
         | None -> nil
         | Some(x, stf') ->
-            if (test i x)
-            then Stream(fun () -> Some(x, keep_if (i+1) stf' test))
-            else (keep_if (i+1) stf' test)
+            Stream(fun () ->
+              if (test i x)
+              then Some(x, keep_if (i+1) stf' test)
+              else (let Stream(f) = (keep_if (i+1) stf' test) in f ()))
     in
       Search(keep_if 0 st test)
 
